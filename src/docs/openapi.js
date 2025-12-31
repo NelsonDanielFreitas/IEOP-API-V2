@@ -6,7 +6,7 @@ function buildOpenApiSpec({ serverUrl }) {
       version: "0.1.0",
     },
     servers: [{ url: serverUrl }],
-    tags: [{ name: "System" }, { name: "Products" }],
+    tags: [{ name: "System" }, { name: "Products" }, { name: "Clients" }],
     components: {
       schemas: {
         ErrorResponse: {
@@ -140,6 +140,50 @@ function buildOpenApiSpec({ serverUrl }) {
             },
           },
         },
+
+        CreateClientRequest: {
+          type: "object",
+          additionalProperties: false,
+          required: ["name"],
+          properties: {
+            name: {
+              type: "string",
+              description: "Nome do cliente.",
+              example: "João Silva",
+            },
+            email: {
+              type: "string",
+              nullable: true,
+              description: "Email do cliente.",
+              example: "joao.silva@email.com",
+            },
+            phone: {
+              type: "string",
+              nullable: true,
+              description: "Telefone do cliente.",
+              example: "+351912345678",
+            },
+          },
+        },
+
+        CreateClientResponse: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            ok: { type: "boolean", example: true },
+            data: {
+              type: "object",
+              description:
+                "Resposta devolvida pela Vendus (campos podem variar).",
+              properties: {
+                id: { type: "integer", example: 123456 },
+                name: { type: "string", example: "João Silva" },
+                email: { type: "string", example: "joao.silva@email.com" },
+                phone: { type: "string", example: "+351912345678" },
+              },
+            },
+          },
+        },
       },
     },
     paths: {
@@ -250,6 +294,53 @@ function buildOpenApiSpec({ serverUrl }) {
                       id: 123,
                       reference: "RENCLI22652",
                       title: "Renault Clio 2.0d",
+                    },
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Erro interno / erro da Vendus",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/clients": {
+        post: {
+          summary: "Cria um cliente no Cegid Vendus",
+          tags: ["Clients"],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CreateClientRequest" },
+                example: {
+                  name: "João Silva",
+                  email: "joao.silva@email.com",
+                  phone: "+351912345678",
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Cliente criado com sucesso",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/CreateClientResponse" },
+                  example: {
+                    ok: true,
+                    data: {
+                      id: 123456,
+                      name: "João Silva",
+                      email: "joao.silva@email.com",
+                      phone: "+351912345678",
                     },
                   },
                 },

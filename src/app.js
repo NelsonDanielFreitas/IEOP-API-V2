@@ -3,6 +3,7 @@ const swaggerUi = require("swagger-ui-express");
 
 const healthRoutes = require("./routes/health.routes");
 const productsRoutes = require("./routes/products.routes");
+const clientsRoutes = require("./routes/client.routes");
 const { env } = require("./config/env");
 const { getOpenApiSpec } = require("./config/swagger");
 const { notFoundHandler } = require("./middleware/notFoundHandler");
@@ -21,6 +22,7 @@ function buildApp() {
 
   app.use("/health", healthRoutes);
   app.use("/products", productsRoutes);
+  app.use("/clients", clientsRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
