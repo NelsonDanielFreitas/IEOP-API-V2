@@ -6,7 +6,12 @@ function buildOpenApiSpec({ serverUrl }) {
       version: "0.1.0",
     },
     servers: [{ url: serverUrl }],
-    tags: [{ name: "System" }, { name: "Products" }, { name: "Clients" }],
+    tags: [
+      { name: "System" },
+      { name: "Products" },
+      { name: "Clients" },
+      { name: "Documents" },
+    ],
     components: {
       schemas: {
         ErrorResponse: {
@@ -184,6 +189,72 @@ function buildOpenApiSpec({ serverUrl }) {
             },
           },
         },
+
+        CreateDocumentRequest: {
+          type: "object",
+          additionalProperties: false,
+          required: ["ClientEmail", "ItemId", "GrossPrice"],
+          properties: {
+            ClientEmail: {
+              type: "string",
+              description:
+                "Email do cliente que tem de existir no Vendus (usado para ir buscar o cliente).",
+              example: "joao.silva@email.com",
+            },
+            ItemId: {
+              type: "integer",
+              description: "ID do item/produto na Vendus.",
+              example: 295783271,
+            },
+            GrossPrice: {
+              type: "number",
+              description: "Preço final (com IVA) do item.",
+              example: 45000,
+            },
+            Notes: {
+              type: "string",
+              description: "Notas/observações no documento.",
+              example: "Pagamento via transferência.",
+            },
+          },
+        },
+
+        CreateDocumentResponse: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            ok: { type: "boolean", example: true },
+            data: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                id: { type: "integer", example: 123456789 },
+                type: { type: "string", nullable: true, example: "FT" },
+                number: {
+                  type: "string",
+                  nullable: true,
+                  example: "FT 2026/1",
+                },
+                date: { type: "string", nullable: true, example: "2026-01-02" },
+                amount_gross: {
+                  type: "number",
+                  nullable: true,
+                  example: 45000,
+                },
+                amount_net: {
+                  type: "number",
+                  nullable: true,
+                  example: 36585.37,
+                },
+                hash: { type: "string", nullable: true },
+                atcud: { type: "string", nullable: true },
+                qrcode: { type: "string", nullable: true },
+                output: { type: "string", nullable: true, example: "pdf" },
+                output_data: { nullable: true },
+              },
+            },
+          },
+        },
       },
     },
     paths: {
@@ -341,6 +412,143 @@ function buildOpenApiSpec({ serverUrl }) {
                       name: "João Silva",
                       email: "joao.silva@email.com",
                       phone: "+351912345678",
+                    },
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Erro interno / erro da Vendus",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      "/documents": {
+        get: {
+          summary: "Lista documentos (Vendus)",
+          description: "Obtém todos os documentos a partir da Vendus.",
+          tags: ["Documents"],
+          responses: {
+            200: {
+              description: "Lista devolvida com sucesso",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      ok: { type: "boolean", example: true },
+                      data: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          description:
+                            "Documento devolvido pela Vendus (campos podem variar).",
+                          additionalProperties: true,
+                        },
+                      },
+                    },
+                  },
+                  example: {
+                    ok: true,
+                    data: [
+                      {
+                        id: 123456789,
+                        type: "FT",
+                        number: "FT 2026/1",
+                        date: "2026-01-02",
+                        amount_gross: 45000,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Erro interno / erro da Vendus",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          summary: "Cria um documento (Vendus)",
+          description:
+            "Cria um documento na Vendus com 1 item e associa ao cliente encontrado pelo email.",
+          tags: ["Documents"],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CreateDocumentRequest" },
+                example: {
+                  ClientEmail: "joao.silva@email.com",
+                  ItemId: 295783271,
+                  GrossPrice: 45000,
+                  Notes: "Pagamento via transferência.",
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Documento criado com sucesso",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/CreateDocumentResponse",
+                  },
+                  example: {
+                    ok: true,
+                    data: {
+                      id: 123456789,
+                      type: "FT",
+                      number: "FT 2026/1",
+                      date: "2026-01-02",
+                      amount_gross: 45000,
+                      amount_net: 36585.37,
+                      hash: "...",
+                      atcud: "...",
+                      qrcode: "...",
+                      output: "pdf",
+                      output_data: null,
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Erro de validação",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                  example: {
+                    ok: false,
+                    error: "VALIDATION_ERROR",
+                    details: { field: "ClientEmail" },
+                  },
+                },
+              },
+            },
+            404: {
+              description: "Cliente não encontrado no Vendus",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                  example: {
+                    ok: false,
+                    error: "CLIENT_NOT_FOUND",
+                    details: {
+                      available: ["cliente1@email.com", "cliente2@email.com"],
                     },
                   },
                 },
